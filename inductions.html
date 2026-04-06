@@ -1,130 +1,63 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html>
 <head>
   <title>Childers Inductions</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f4f6f8;
-    }
-
-    header {
-      background: #111;
-      color: white;
-      padding: 16px;
-      font-size: 18px;
-    }
-
-    .container {
-      padding: 16px;
-      max-width: 900px;
-      margin: auto;
-    }
+    body { font-family: Arial; margin:0; background:#f4f6f8; }
+    header { background:#111; color:#fff; padding:16px; font-size:18px; }
+    .container { padding:16px; max-width:900px; margin:auto; }
 
     input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
+      width:100%; padding:12px; margin-bottom:15px;
+      border-radius:8px; border:1px solid #ddd;
     }
 
     .card {
-      background: white;
-      padding: 14px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      background:#fff; padding:14px;
+      border-radius:10px; margin-bottom:10px;
     }
 
-    .name {
-      font-weight: bold;
-      font-size: 16px;
-    }
-
-    .company {
-      color: #666;
-      font-size: 14px;
-      margin-top: 2px;
-    }
+    .name { font-weight:bold; font-size:16px; }
+    .company { color:#666; font-size:14px; }
 
     .row {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 8px;
-      font-size: 13px;
+      display:flex; justify-content:space-between;
+      margin-top:8px; font-size:13px;
     }
 
-    .status {
-      font-weight: bold;
-    }
-
-    .valid {
-      color: green;
-    }
-
-    .invalid {
-      color: red;
-    }
+    .valid { color:green; font-weight:bold; }
+    .invalid { color:red; font-weight:bold; }
 
     .topbar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
+      display:flex; gap:10px; margin-bottom:15px;
     }
 
     .stat {
-      flex: 1;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
+      flex:1; background:#fff; padding:10px;
+      border-radius:8px; text-align:center;
     }
 
-    .stat p {
-      margin: 0;
-      font-weight: bold;
-      font-size: 18px;
-    }
-
-    .stat span {
-      font-size: 12px;
-      color: #777;
-    }
+    .stat p { margin:0; font-size:18px; font-weight:bold; }
+    .stat span { font-size:12px; color:#777; }
   </style>
 </head>
 
 <body>
 
-<header>
-  Childers — Induction Register
-</header>
+<header>Childers — Induction Register</header>
 
 <div class="container">
 
-  <!-- KPI -->
   <div class="topbar">
-    <div class="stat">
-      <p id="total">0</p>
-      <span>Total</span>
-    </div>
-    <div class="stat">
-      <p id="valid">0</p>
-      <span>Valid</span>
-    </div>
-    <div class="stat">
-      <p id="missing">0</p>
-      <span>Missing</span>
-    </div>
+    <div class="stat"><p id="total">0</p><span>Total</span></div>
+    <div class="stat"><p id="valid">0</p><span>Valid</span></div>
+    <div class="stat"><p id="missing">0</p><span>Missing</span></div>
   </div>
 
-  <!-- SEARCH -->
-  <input type="text" id="search" placeholder="Search name or company...">
+  <input id="search" placeholder="Search name or company...">
 
-  <!-- LIST -->
   <div id="list"></div>
 
 </div>
@@ -132,50 +65,57 @@
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRT9SYjuRCNvmZDbM0SRjP5xQz9mrm7NVbVzXabep8t0JCNFISYo6x4c41qrJO83XWnYvoBj7LjDE2D/pub?output=csv";
 
-let dataRows = [];
-let headers = [];
+let allData = [];
 
 fetch(CSV_URL)
   .then(res => res.text())
   .then(data => {
+
     const rows = data.split("\n").map(r => r.split(","));
-    headers = rows[0];
+    const headers = rows[0];
 
-    const jobIndex = headers.findIndex(h => h.toLowerCase().includes("job"));
+    // 🔑 FIND COLUMNS BY NAME
+    const getIndex = name =>
+      headers.findIndex(h => h.toLowerCase().includes(name));
 
-    // FILTER CHILDERS
-    const filtered = rows.filter((row, i) => {
-      if (i === 0) return false;
-      return row[jobIndex] && row[jobIndex].toLowerCase().includes("childers");
-    });
+    const nameIndex = getIndex("name");
+    const companyIndex = getIndex("company");
+    const timeIndex = getIndex("time");
+    const jobIndex = getIndex("job");
+    const statusIndex = headers.length - 1; // adjust if needed
 
-    dataRows = filtered;
+    // 🔥 FILTER CHILDERS
+    const filtered = rows.slice(1).filter(r =>
+      r[jobIndex] && r[jobIndex].toLowerCase().includes("childers")
+    );
 
-    render(filtered);
-    updateStats(filtered);
+    allData = filtered.map(r => ({
+      name: r[nameIndex],
+      company: r[companyIndex],
+      time: r[timeIndex],
+      status: r[statusIndex]
+    }));
+
+    render(allData);
+    updateStats(allData);
   });
 
-function render(rows) {
+function render(data) {
   let html = "";
 
-  rows.forEach(row => {
-
-    let name = row[1] || "Unknown";
-    let company = row[2] || "—";
-    let time = row[0] || "";
-    let status = row[row.length - 1];
-
-    let cls = status ? "valid" : "invalid";
-    let label = status ? "VALID" : "MISSING";
+  data.forEach(d => {
+    const valid = d.status;
+    const cls = valid ? "valid" : "invalid";
+    const label = valid ? "VALID" : "MISSING";
 
     html += `
       <div class="card">
-        <div class="name">${name}</div>
-        <div class="company">${company}</div>
+        <div class="name">${d.name || "Unknown"}</div>
+        <div class="company">${d.company || ""}</div>
 
         <div class="row">
-          <div>${time}</div>
-          <div class="status ${cls}">${label}</div>
+          <div>${d.time || ""}</div>
+          <div class="${cls}">${label}</div>
         </div>
       </div>
     `;
@@ -184,26 +124,21 @@ function render(rows) {
   document.getElementById("list").innerHTML = html;
 }
 
-function updateStats(rows) {
-  let total = rows.length;
-  let valid = 0;
-  let missing = 0;
-
-  rows.forEach(r => {
-    if (r[r.length - 1]) valid++;
-    else missing++;
-  });
+function updateStats(data) {
+  let total = data.length;
+  let valid = data.filter(d => d.status).length;
+  let missing = total - valid;
 
   document.getElementById("total").innerText = total;
   document.getElementById("valid").innerText = valid;
   document.getElementById("missing").innerText = missing;
 }
 
-document.getElementById("search").addEventListener("keyup", function(e) {
+document.getElementById("search").addEventListener("keyup", e => {
   const term = e.target.value.toLowerCase();
 
-  const filtered = dataRows.filter(row =>
-    row.join(" ").toLowerCase().includes(term)
+  const filtered = allData.filter(d =>
+    (d.name + " " + d.company).toLowerCase().includes(term)
   );
 
   render(filtered);
