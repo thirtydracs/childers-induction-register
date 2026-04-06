@@ -1,3 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Childers Induction Register</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: -apple-system, Arial;
+      margin: 0;
+      background: #f2f4f7;
+    }
+
+    header {
+      background: #111;
+      color: white;
+      padding: 18px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .container {
+      padding: 16px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .topbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .stat {
+      flex: 1;
+      background: white;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .stat p {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .stat span {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .card {
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .bar {
+      width: 6px;
+      height: 100%;
+    }
+
+    .valid-bar { background: #2ecc71; }
+    .invalid-bar { background: #e74c3c; }
+
+    .content {
+      padding: 12px 14px;
+      flex: 1;
+    }
+
+    .name {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .company {
+      font-size: 13px;
+      color: #777;
+      margin-top: 2px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .status {
+      font-weight: 600;
+    }
+
+    .valid { color: #2ecc71; }
+    .invalid { color: #e74c3c; }
+
+    .error {
+      color: red;
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>Childers — Induction Register</header>
+
+<div class="container">
+
+  <div class="topbar">
+    <div class="stat">
+      <p id="total">0</p>
+      <span>Total</span>
+    </div>
+    <div class="stat">
+      <p id="valid">0</p>
+      <span>Valid</span>
+    </div>
+    <div class="stat">
+      <p id="missing">0</p>
+      <span>Missing</span>
+    </div>
+  </div>
+
+  <input id="search" placeholder="Search name or company...">
+
+  <div id="list"></div>
+
+</div>
+
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRT9SYjuRCNvmZDbM0SRjP5xQz9mrm7NVbVzXabep8t0JCNFISYo6x4c41qrJO83XWnYvoBj7LjDE2D/pub?output=csv";
 
@@ -8,12 +155,16 @@ fetch(CSV_URL)
   .then(text => {
 
     const rows = text.split("\n").map(r => r.split(","));
-    const headers = rows[0];
 
-    const find = (name) =>
-      headers.findIndex(h => h.toLowerCase().includes(name));
+    if (!rows.length) throw new Error("No data");
 
-    // 🔑 MATCH YOUR HEADINGS
+    const headers = rows[0].map(h => h.toLowerCase());
+
+    const find = (name) => {
+      const i = headers.findIndex(h => h.includes(name));
+      return i === -1 ? null : i;
+    };
+
     const firstNameI = find("first");
     const surnameI = find("surname");
     const mobileI = find("mobile");
@@ -22,20 +173,24 @@ fetch(CSV_URL)
 
     data = rows.slice(1).map(r => {
 
-      const fullName = `${r[firstNameI] || ""} ${r[surnameI] || ""}`.trim();
-      const inducted = r[dateI];
+      const first = firstNameI !== null ? r[firstNameI] : "";
+      const last = surnameI !== null ? r[surnameI] : "";
 
       return {
-        name: fullName,
-        company: r[companyI],
-        mobile: r[mobileI],
-        date: inducted,
-        status: inducted // if date exists = valid
+        name: (first + " " + last).trim(),
+        company: companyI !== null ? r[companyI] : "",
+        mobile: mobileI !== null ? r[mobileI] : "",
+        date: dateI !== null ? r[dateI] : "",
       };
     });
 
     render(data);
     stats(data);
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("list").innerHTML =
+      "<div class='error'>Error loading data</div>";
   });
 
 function render(list) {
@@ -43,7 +198,7 @@ function render(list) {
 
   list.forEach(d => {
 
-    const ok = d.status;
+    const ok = d.date;
     const bar = ok ? "valid-bar" : "invalid-bar";
     const cls = ok ? "valid" : "invalid";
     const label = ok ? "VALID" : "MISSING";
@@ -58,7 +213,7 @@ function render(list) {
 
           <div class="row">
             <div>${d.mobile || ""}</div>
-            <div class="${cls}">${label}</div>
+            <div class="status ${cls}">${label}</div>
           </div>
 
           <div class="row">
@@ -74,7 +229,7 @@ function render(list) {
 
 function stats(list) {
   const total = list.length;
-  const valid = list.filter(d => d.status).length;
+  const valid = list.filter(d => d.date).length;
 
   document.getElementById("total").innerText = total;
   document.getElementById("valid").innerText = valid;
@@ -93,3 +248,6 @@ document.getElementById("search").addEventListener("keyup", e => {
   render(filtered);
 });
 </script>
+
+</body>
+</html>
