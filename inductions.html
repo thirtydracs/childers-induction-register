@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pearl Energy Childers — Inductions</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f6f8;
+    }
+
+    header {
+      background: #111;
+      color: white;
+      padding: 16px;
+      font-size: 18px;
+    }
+
+    .container {
+      padding: 16px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .back {
+      margin-bottom: 10px;
+      display: inline-block;
+      color: #555;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .card {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 12px;
+      color: #777;
+    }
+
+    .card p {
+      margin: 5px 0 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th {
+      background: #111;
+      color: white;
+      padding: 12px;
+      text-align: left;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    tr:hover {
+      background: #f5f5f5;
+    }
+
+    .valid {
+      color: green;
+      font-weight: bold;
+    }
+
+    .invalid {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  Pearl Energy Childers — Induction Register
+</header>
+
+<div class="container">
+
+  <a class="back" href="../index.html">← Back to Hub</a>
+
+  <!-- KPI CARDS -->
+  <div class="cards">
+    <div class="card">
+      <h3>Total Inductions</h3>
+      <p id="total">0</p>
+    </div>
+    <div class="card">
+      <h3>Valid</h3>
+      <p id="valid">0</p>
+    </div>
+    <div class="card">
+      <h3>Missing</h3>
+      <p id="missing">0</p>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <input type="text" id="search" placeholder="Search name, company...">
+
+  <!-- TABLE -->
+  <div id="table"></div>
+
+</div>
+
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRT9SYjuRCNvmZDbM0SRjP5xQz9mrm7NVbVzXabep8t0JCNFISYo6x4c41qrJO83XWnYvoBj7LjDE2D/pub?output=csv";
+
+let allRows = [];
+
+fetch(CSV_URL)
+  .then(res => res.text())
+  .then(data => {
+    const rows = data.split("\n").map(r => r.split(","));
+    allRows = rows;
+    renderTable(rows);
+    updateStats(rows);
+  });
+
+function renderTable(rows) {
+  let html = "<table>";
+
+  rows.forEach((row, i) => {
+    html += "<tr>";
+
+    row.forEach((cell, index) => {
+      if (i === 0) {
+        html += `<th>${cell}</th>`;
+      } else {
+
+        // LAST COLUMN = induction status
+        if (index === row.length - 1) {
+          let status = cell ? "VALID" : "MISSING";
+          let cls = cell ? "valid" : "invalid";
+          html += `<td class="${cls}">${status}</td>`;
+        } else {
+          html += `<td>${cell}</td>`;
+        }
+
+      }
+    });
+
+    html += "</tr>";
+  });
+
+  html += "</table>";
+  document.getElementById("table").innerHTML = html;
+}
+
+function updateStats(rows) {
+  let total = rows.length - 1;
+  let valid = 0;
+  let missing = 0;
+
+  rows.slice(1).forEach(row => {
+    if (row[row.length - 1]) {
+      valid++;
+    } else {
+      missing++;
+    }
+  });
+
+  document.getElementById("total").innerText = total;
+  document.getElementById("valid").innerText = valid;
+  document.getElementById("missing").innerText = missing;
+}
+
+document.getElementById("search").addEventListener("keyup", function(e) {
+  const term = e.target.value.toLowerCase();
+
+  const filtered = allRows.filter((row, i) => {
+    if (i === 0) return true;
+    return row.join(" ").toLowerCase().includes(term);
+  });
+
+  renderTable(filtered);
+});
+</script>
+
+</body>
+</html>
