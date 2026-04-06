@@ -1,144 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Childers Inductions</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <style>
-    body {
-      font-family: -apple-system, Arial;
-      margin: 0;
-      background: #f2f4f7;
-    }
-
-    header {
-      background: #111;
-      color: white;
-      padding: 18px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .container {
-      padding: 16px;
-      max-width: 800px;
-      margin: auto;
-    }
-
-    input {
-      width: 100%;
-      padding: 14px;
-      margin-bottom: 15px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    }
-
-    .topbar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    .stat {
-      flex: 1;
-      background: white;
-      padding: 12px;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    }
-
-    .stat p {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    .stat span {
-      font-size: 12px;
-      color: #777;
-    }
-
-    .card {
-      display: flex;
-      align-items: center;
-      background: white;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-
-    .bar {
-      width: 6px;
-      height: 100%;
-    }
-
-    .valid-bar { background: #2ecc71; }
-    .invalid-bar { background: #e74c3c; }
-
-    .content {
-      padding: 12px 14px;
-      flex: 1;
-    }
-
-    .name {
-      font-weight: 600;
-      font-size: 15px;
-    }
-
-    .company {
-      font-size: 13px;
-      color: #777;
-      margin-top: 2px;
-    }
-
-    .row {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 8px;
-      font-size: 12px;
-      color: #555;
-    }
-
-    .status {
-      font-weight: 600;
-    }
-
-    .valid { color: #2ecc71; }
-    .invalid { color: #e74c3c; }
-  </style>
-</head>
-
-<body>
-
-<header>Childers — Induction Register</header>
-
-<div class="container">
-
-  <div class="topbar">
-    <div class="stat">
-      <p id="total">0</p>
-      <span>Total</span>
-    </div>
-    <div class="stat">
-      <p id="valid">0</p>
-      <span>Valid</span>
-    </div>
-    <div class="stat">
-      <p id="missing">0</p>
-      <span>Missing</span>
-    </div>
-  </div>
-
-  <input id="search" placeholder="Search name or company...">
-
-  <div id="list"></div>
-
-</div>
-
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRT9SYjuRCNvmZDbM0SRjP5xQz9mrm7NVbVzXabep8t0JCNFISYo6x4c41qrJO83XWnYvoBj7LjDE2D/pub?output=csv";
 
@@ -149,13 +8,31 @@ fetch(CSV_URL)
   .then(text => {
 
     const rows = text.split("\n").map(r => r.split(","));
+    const headers = rows[0];
 
-    data = rows.slice(1).map(r => ({
-      name: r[9],
-      company: r[10],
-      time: r[11],
-      status: r[26]
-    }));
+    const find = (name) =>
+      headers.findIndex(h => h.toLowerCase().includes(name));
+
+    // 🔑 MATCH YOUR HEADINGS
+    const firstNameI = find("first");
+    const surnameI = find("surname");
+    const mobileI = find("mobile");
+    const companyI = find("company");
+    const dateI = find("date");
+
+    data = rows.slice(1).map(r => {
+
+      const fullName = `${r[firstNameI] || ""} ${r[surnameI] || ""}`.trim();
+      const inducted = r[dateI];
+
+      return {
+        name: fullName,
+        company: r[companyI],
+        mobile: r[mobileI],
+        date: inducted,
+        status: inducted // if date exists = valid
+      };
+    });
 
     render(data);
     stats(data);
@@ -180,8 +57,12 @@ function render(list) {
           <div class="company">${d.company || ""}</div>
 
           <div class="row">
-            <div>${d.time || ""}</div>
-            <div class="status ${cls}">${label}</div>
+            <div>${d.mobile || ""}</div>
+            <div class="${cls}">${label}</div>
+          </div>
+
+          <div class="row">
+            <div>Inducted: ${d.date || "-"}</div>
           </div>
         </div>
       </div>
@@ -204,12 +85,11 @@ document.getElementById("search").addEventListener("keyup", e => {
   const term = e.target.value.toLowerCase();
 
   const filtered = data.filter(d =>
-    (d.name + " " + d.company).toLowerCase().includes(term)
+    (d.name + " " + d.company + " " + d.mobile)
+      .toLowerCase()
+      .includes(term)
   );
 
   render(filtered);
 });
 </script>
-
-</body>
-</html>
